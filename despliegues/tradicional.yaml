@@ -1,0 +1,124 @@
+kind: PersistentVolume       # El admin del cluster
+apiVersion: v1
+metadata: 
+    name: mi-pv
+spec:
+    #caracteristicas que quiero
+    storageClassName: rapidito
+    storage:
+        capacity: 20Gi
+    accessModes:
+        - ReadWriteOnce # Solamente se puede utilizar ese volumen por un único nodo del cluster de kub
+                        # dentro de ese nodo, en todos los pods que me de la gana
+        - ReadOnlyMany
+        - ReadWriteMany
+    hostPath:
+        type: DirectoryOrCreate
+        path: /home/ubuntu/environment/datos/nginx
+      #nfs:
+      #  server: mi-servidor-nfs
+      #  path:   /exportada/datos/nginx
+---
+# En paralelo, puedo tener un programa que mire los pvc que se van creando en kubernetes     |
+#       Si hay uno que se ha creado para el sc XXXXXXXXX                                     | Provisionador de vol
+#.      En automatico el programa crea un PV                                                 |
+# Quien vincula un pvc con un pv? kubernetes
+# En base a qué vicula?
+# Se busca un pv que:
+    # Sea del mismo storageClass
+    # que admita el accessModesolicitado en el pvc
+    # Que al menos tenga un tamaño igual o superior al solicitado en el pvc
+---
+kind: PersistentVolumeClaim   # El de la app
+apiVersion: v1
+metadata: 
+    name: mi-pvc
+spec:
+    #caracteristicas que quiero
+    storageClassName: rapidito
+    requests:
+        resources:
+            capacity: 10Gi
+    accessModes:
+        - ReadWriteOnce # Solamente se puede utilizar ese volumen por un único nodo del cluster de kub
+                        # dentro de ese nodo, en todos los pods que me de la gana
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+    name: mi-deployment
+spec:
+    replicas: 2
+    
+    selector:
+        matchLabels:
+            milabel: mivalor
+    
+    template:
+        metadata:
+            labels:
+                milabel: mivalor
+        spec:
+            volumes:
+                - name: datos
+                  persistentVolumeClaim:
+                    claimName: mi-pvc
+                
+                  #hostPath:
+                  #  type: DirectoryOrCreate
+                  #  path: /home/ubuntu/environment/datos/nginx
+                  #nfs:
+                  #  server: mi-servidor-nfs
+                  #  path:   /exportada/datos/nginx
+                  # Problemas:
+                  # 1: No puedo crear volumenes dinamicamente? Trabaja sobre algo que exista
+                  # 2: Quien ha escrito este fichero? Administrador del cluster de Kubernetes?No, ni de coña... 
+                  # me lo dará el de la app
+                  # Ese tio, individuo elige donde se guardan los datos? Ni de coña
+                    
+            containers:
+                - image: nginx
+                  name: contenedor1
+                  volumeMounts:
+                    - name: datos
+                      mountPath: /misDatos
+
+
+deployment > podX -> mi-pvc <> mi-pv
+
+Que pasa si borro el podX o el deployment? NADA. NO PASA NADA DE NADA, NI LO MAS MINIMO
+El PVC sigue ahi... y sigue vinculado al PV
+    Si mañana vuelvo a crear el deployment o el POD? Ese pod usaria el mismo volumen. PERSISTENCIA
+    
+Que pasa si borro el POD y el PVC? Dependerá de la politica definida en el PV. A saber
+        Retain: Los datos se mantienen... allá donde estén guardados
+        Delete: Los datos se borran.... allá donde estén guardados...
+    Pero, en cualquier caso, Que pasa con el PV? Estado, Status: Released (LIBERADO)
+
+Cuando se puede reutilizar ese volumen? Cuando va kubernetes a volver a asociar/vincular ese pv a otro pvc? NUNCA !
+
+Que pasa cuando creo un nuevo POD? Jodido voy.... He perdido los datos? 
+    NO, siguen donde quiera que estén si he configurado un reclaim Policy: RETAIN
+    O SI
+
+Pero en cualquier caso, el POD no puede acceder a ellos.
+
+CONCLUSION: UN PVC una vez creado no lo borro ni pa'tras
+
+Despliegue: v1 app
+    PVC
+Desinstalación / instalación nueva
+    Más me vale no borrar el pvc... que la lio...
+            v2 app
+
+
+
+
+
+PV2 <> PVC17  <   Pod v1 XXXXXXXXX
+                  Pod v2 XXXXXXXXX
+                  Pod v3 XXXXXXXXX
+                  Pod v3b crash
+
+

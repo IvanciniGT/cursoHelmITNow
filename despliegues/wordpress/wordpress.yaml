@@ -1,0 +1,13 @@
+Configmap
+---
+Secrets
+---
+PVC
+---
+Ingress
+---
+Service
+---
+Deployment
+---
+HPA

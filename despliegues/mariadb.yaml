@@ -1,0 +1,5 @@
+  ## `mariadb-root-password`, `mariadb-replication-password` and `mariadb-password`
+  ##
+  existingSecret: mariadb-secret
+  ---
+  mariadb-pvc
