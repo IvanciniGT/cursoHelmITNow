@@ -1,13 +1,159 @@
-Configmap
+kind: PersistentVolume       # El admin del cluster
+apiVersion: v1
+metadata: 
+    name: pv-wordpress
+spec:
+    storageClassName: rapidito
+    storage:
+        capacity: 20Gi
+    accessModes:
+        - ReadWriteOnce # Solamente se puede utilizar ese volumen por un único nodo del cluster de kub
+                        # dentro de ese nodo, en todos los pods que me de la gana
+        - ReadOnlyMany
+        - ReadWriteMany
+    hostPath:
+        type: DirectoryOrCreate
+        path: /home/ubuntu/environment/datos/wordpress
+        
+        
+        
+        
+---        
+
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+    name: wordpress-configuracion
+data:
+    USUARIO: usuario
+    BASE_DE_DATOS: curso
+
 ---
-Secrets
+apiVersion: v1
+kind: Secret
+metadata: 
+    name: wordpress-secretos
+data:
+    CONTRASENA: cGFzc3dvcmQ=
 ---
-PVC
+kind: PersistentVolumeClaim  
+apiVersion: v1
+metadata: 
+    name: wordpress-pvc
+spec:
+    storageClassName: rapidito
+    requests:
+        resources:
+            capacity: 10Gi
+    accessModes:
+        - ReadWriteMany
+
 ---
-Ingress
+#Ingress
+
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata: 
+#    name: wordpress
+#spec:
+#    rules:
+#        - host: miwordpress
+#          http:
+#            paths:
+#                - path: /
+#                  pathType: Prefix
+#                  backend:
+#                    service: wordpress
+#                    port:
+#                        number: 8080
+                   
 ---
-Service
+
+apiVersion: v1
+kind: Service
+metadata: 
+    name: wordpress
+spec:
+    type: NodePort #ClusterIP LoadBalancer
+    ports:
+        - port: 8080
+          target: 80
+    selector:
+        app: wordpress
 ---
-Deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+    name: mi-wp
+spec:
+    replicas: 1
+    
+    selector:
+        matchLabels:
+            app: wordpress
+    
+    template:
+        metadata:
+            labels:
+                app: wordpress
+        spec:
+            affinities: {}
+            volumes:
+                - name: datos
+                  persistentVolumeClaim:
+                    claimName: wordpress-pvc
+                
+            containers:
+                - image: wordpress:latest
+                  name: wordpress
+                  resources:
+                    requests:
+                        memory: 1024Mi
+                        cpu: 1
+                    limits:
+                        memory: 1024Mi
+                        cpu: ~
+                  volumeMounts:
+                    - name: datos
+                      mountPath: /var/www/html
+                  ports:
+                    containerPort: 80
+                  env: 
+                      - name: WORDPRESS_DB_HOST
+                        value: mariadb
+                      - name: WORDPRESS_DB_USER
+                        valueFrom: 
+                            configMapKeyRef:
+                                name: wordpress-configuracion
+                                key:  USUARIO
+                      - name: WORDPRESS_DB_PASSWORD
+                        valueFrom: 
+                            secretKeyRef:
+                                name: wordpress-secretos
+                                key:  CONTRASENA
+                      - name: WORDPRESS_DB_NAME
+                        valueFrom: 
+                            configMapKeyRef:
+                                name: wordpress-configuracion
+                                key:  BASE_DE_DATOS
+
 ---
-HPA
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata: 
+    name: hpa-wordpress
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: mi-wp
+    
+    minReplicas: 1
+    maxReplicas: 5
+    
+    # Metricas
+    targetCPUUtilizationPercentage: 50
