@@ -9,7 +9,7 @@ wordpress:
     autoscale:
       enabled: false
       min: 1
-      max: ~
+      max: 10
       ## Al menos debe suministrarse uno de estos valores en caso de activar 
       ## wordpress.deploy.autoscale.enabled
       cpu: ~

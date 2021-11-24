@@ -1,16 +1,30 @@
+{{ if .Values.wordpress.deploy.autoscale.enabled }}
 
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata: 
-    name: hpa-wordpress
+    name:  {{ .Release.Name }}-hpa-wordpress
 spec:
     scaleTargetRef:
         apiVersion: apps/v1
         kind: Deployment
         name: mi-wp
     
-    minReplicas: 1
-    maxReplicas: 5
+    minReplicas: {{ .Values.wordpress.deploy.autoscale.min }}
+    maxReplicas: {{ .Values.wordpress.deploy.autoscale.max }}
     
     # Metricas
-    targetCPUUtilizationPercentage: 50
+    #targetCPUUtilizationPercentage: 50
+    metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            type: Utilization
+            averageUtilization: 50
+        - type: Resource
+          resource:
+            name: memory
+            type: Utilization
+            averageUtilization: 1000Mi
+{{ end }}            
+            
