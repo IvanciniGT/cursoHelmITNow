@@ -109,3 +109,30 @@ externalDB:
       ## Nombre la clave que contiene la contraseña. 
       ## Deberá estar definida en el secret
       key: ~
+
+mariadb:
+  
+  enabled: true
+  
+  # nameOverride: ""
+  # fullnameOverride: ""
+  # service:
+  #   ports:
+  #     mysql: 3306
+  
+  auth:
+    rootPassword: "change-me"
+    database: "wordpress"
+    username: "usuario"
+    password: "change-me"
+    # existingSecret: ~
+
+  primary:
+    persistence:
+      enabled: false
+      
+      # existingClaim: ~
+      # storageClass: ""
+      # accessModes:
+      #   - ReadWriteOnce
+      # size: 8Gi
