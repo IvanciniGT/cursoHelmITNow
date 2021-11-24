@@ -96,7 +96,7 @@ spec:
                     claimName: wordpress-pvc
                 
             containers:
-                - image: wordpress:latest
+                - image: wordpress:php8.0-apache
                   name: wordpress
                   resources:
                     requests:

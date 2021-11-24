@@ -1,0 +1,7 @@
+apiVersion: v2                # Version del esquena YAML usado en HELM # FIJA. Ni nos preocupa
+version: 0.1.0                # Versión del chart
+appVersion: "8.0.0"          # Versión de Wordpress que vamos a montar
+
+name: wordpress
+description: Chart para instalar wordpress
+type: application
