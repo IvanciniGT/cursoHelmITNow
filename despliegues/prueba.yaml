@@ -1,0 +1,104 @@
+---
+# Source: wordpress/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata: 
+    name: wordpress-secretos
+data:
+    CONTRASENA: cGFzc3dvcmQ=
+---
+# Source: wordpress/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+    name: RELEASE-NAME-wordpress-config
+data:
+    USUARIO: usuario
+    BASE_DE_DATOS: wordpress
+---
+# Source: wordpress/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata: 
+    name: RELEASE-NAME-wordpress
+spec:
+    type: ClusterIP
+    ports:
+        - port: 80
+          targetPort: 80
+    selector:
+        app: RELEASE-NAME-wordpress
+---
+# Source: wordpress/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+    name: mi-wp
+spec:
+    replicas: 1
+    
+    selector:
+        matchLabels:
+            app: wordpress
+    
+    template:
+        metadata:
+            labels:
+                app: wordpress
+        spec:
+            affinity: {}
+            volumes:
+                - name: datos
+                  persistentVolumeClaim:
+                    claimName: wordpress-pvc
+                
+            containers:
+                - image: wordpress:php8.0-apache
+                  name: wordpress
+                  resources:
+                    requests:
+                        memory: 1024Mi
+                        cpu: 1
+                    limits:
+                        memory: 1024Mi
+                        #cpu: ~
+                  volumeMounts:
+                    - name: datos
+                      mountPath: /var/www/html
+                  ports:
+                    - containerPort: 80
+                  env: 
+                      - name: WORDPRESS_DB_HOST
+                        value: ivanmdb-mariadb
+                      - name: WORDPRESS_DB_USER
+                        valueFrom: 
+                            configMapKeyRef:
+                                name: wordpress-configuracion
+                                key:  USUARIO
+                      - name: WORDPRESS_DB_PASSWORD
+                        valueFrom: 
+                            secretKeyRef:
+                                name: mariadb-secretos
+                                key:  mariadb-password
+                      - name: WORDPRESS_DB_NAME
+                        valueFrom: 
+                            configMapKeyRef:
+                                name: wordpress-configuracion
+                                key:  BASE_DE_DATOS
+---
+# Source: wordpress/templates/hpa.yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata: 
+    name: hpa-wordpress
+spec:
+    scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: mi-wp
+    
+    minReplicas: 1
+    maxReplicas: 5
+    
+    # Metricas
+    targetCPUUtilizationPercentage: 50

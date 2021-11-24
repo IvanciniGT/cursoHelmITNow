@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+    name: {{ .Release.Name }}-wordpress-config
+data:
+    USUARIO: {{ if .Values.externalDB.enabled -}}
+                {{- .Values.externalDB.auth.username -}}
+                {{- else -}}
+                {{- .Values.mariadb.auth.username -}}
+                {{- end }}
+    BASE_DE_DATOS: {{ if .Values.externalDB.enabled -}}
+                    {{- .Values.externalDB.name -}}
+                    {{- else -}}
+                    {{- .Values.mariadb.auth.database -}}
+                    {{- end }}

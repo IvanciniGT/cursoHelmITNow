@@ -1,0 +1,138 @@
+wordpress:
+
+  extraLabels: {}
+
+  deploy:
+  
+    initialReplicaCount: 1
+  
+    autoscale:
+      enabled: false
+      min: 1
+      max: ~
+      ## Al menos debe suministrarse uno de estos valores en caso de activar 
+      ## wordpress.deploy.autoscale.enabled
+      cpu: ~
+      memory: ~
+      
+    ## allowed:       No se define antiafinidad
+    ## disallowed:    Defino antiafinidad, de tipo REQUIRED
+    ## discouraged:   Defino antiafinidad, de tipo PREFERRED
+    allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
+    affinity: {}
+    
+    resources:
+      requests:
+          memory: ~
+          cpu: ~
+      limits:
+          memory: ~
+          cpu: ~
+    
+    extraEnvVars: {}
+    ## taints: {}
+    ## extraAnnotations: {}
+
+  image:
+    ## registry: 
+    ## registrySecret:
+    repo: wordpress
+    tag:  php8.0-apache
+    port: 80
+    persistentPath: /var/www/html
+
+  service:
+    ## Por defecto el servicio se llamará RELEASE-wordpress
+    nameOverride:
+      
+      ## Puede cambiarse la parte de "wordpress" con la siguiente propiedad
+      suffixOverride: ~
+      
+      ## Puede cambiarse a uno fijo con la soiguiente propiedad.
+      ## En cuyo caso se ignora la propiedad: wordpress.service.override.suffixOverride
+      fullOverride:   ~
+      
+    type: ClusterIP # NodePort # LoadBalancer
+    port: 80
+    
+    ## Si se especifica un tipo: NodePort, activar si se desea establecer un nodePort fijo
+    nodePort: 33333
+
+    ## Si se especifica un tipo: LoadBalancer, activar si se desea establecer una IP EXTERNA fija
+    loadBalancerIP: 192.168.1.1
+
+  persistence:
+    ## Si quiero tener un pvc asociado a wordpress y 
+    ## por ende un volumen persistente
+    ## En false no utilziar nunca en un entorno de producción. 
+    ## SOLO PARA PRUEBAS lo dejaré en false.
+    enabled: false
+    
+    existingClaim:
+      enabled: false
+      name: ~
+
+    ## Los siguientes datos se ignoran si se activa 
+    ## existingClaim.enabled   
+    storageClassName: ""
+    capacity: ~
+    accessModes:
+        #- ReadWriteOnce
+        #- ReadOnceMany
+        - ReadWriteMany
+        #- ReadWriteOncePod
+
+## Esto esta bien si voy a usar una BBDD Externa
+## Y si la monto yo? desde este chart? Esto no vale, 
+## ya que queremos usar el chart de bitnami/mariadb
+externalDB:
+  enabled: false
+  ## Nombre de la base de datos a montar
+  host: ~
+  port: 3306
+  name: ~
+
+  auth:
+
+    username: ~
+    ## Si se activa existingSecret.enabled 
+    ## se ignora este campo
+
+    password: ~
+
+    existingSecret: 
+      ## Si se activa, se debe suministrar un secreto creado externamente
+      ## se ignora el campo db.auth.password
+      enabled: false
+      ## Nombre del secreto existente
+      name: ~
+      ## Nombre la clave que contiene la contraseña. 
+      ## Deberá estar definida en el secret
+      key: ~
+
+mariadb:
+  
+  enabled: true
+  
+  # nameOverride: ""
+  # fullnameOverride: ""
+  # service:
+  #   ports:
+  #     mysql: 3306
+  
+  auth:
+    rootPassword: "change-me"
+    database: "wordpress"
+    username: "usuario"
+    password: "change-me"
+    # existingSecret: ~
+
+  primary:
+    persistence:
+      enabled: false
+      
+      # existingClaim: ~
+      # storageClass: ""
+      # accessModes:
+      #   - ReadWriteOnce
+      # size: 8Gi
