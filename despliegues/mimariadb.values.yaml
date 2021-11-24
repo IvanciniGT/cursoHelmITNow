@@ -127,7 +127,7 @@ auth:
   ## The secret has to contain the keys 
   ## `mariadb-root-password`, `mariadb-replication-password` and `mariadb-password`
   ##
-  existingSecret: mariadb-secret
+  existingSecret: mariadb-secretos
   ## @param auth.forcePassword Force users to specify required passwords
   ##
   forcePassword: false

@@ -1,5 +1,38 @@
-  ## `mariadb-root-password`, `mariadb-replication-password` and `mariadb-password`
-  ##
-  existingSecret: mariadb-secret
-  ---
-  mariadb-pvc
+apiVersion: v1
+kind: Secret
+metadata: 
+    name: mariadb-secretos
+data:
+    mariadb-root-password: cGFzc3dvcmQ=
+    mariadb-replication-password: cGFzc3dvcmQ=
+    mariadb-password: cGFzc3dvcmQ=
+---
+kind: PersistentVolume       # El admin del cluster
+apiVersion: v1
+metadata: 
+    name: pv-mariadb
+spec:
+    storageClassName: rapidito
+    capacity:
+        storage: 20Gi
+    accessModes:
+        - ReadWriteOnce # Solamente se puede utilizar ese volumen por un único nodo del cluster de kub
+                        # dentro de ese nodo, en todos los pods que me de la gana
+        - ReadOnlyMany
+        - ReadWriteMany
+    hostPath:
+        type: DirectoryOrCreate
+        path: /home/ubuntu/environment/datos/mariadb
+---
+kind: PersistentVolumeClaim  
+apiVersion: v1
+metadata: 
+    name: mariadb-pvc
+spec:
+    storageClassName: rapidito
+    resources:
+        requests:
+            storage: 10Gi
+    accessModes:
+        - ReadWriteMany
+---
