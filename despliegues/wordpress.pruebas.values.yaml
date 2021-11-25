@@ -25,11 +25,11 @@ wordpress:
     
     resources:
       requests:
-          memory: ~
+          memory: 10Gi
           cpu: ~
       limits:
           memory: ~
-          cpu: ~
+          cpu: 2
     
     extraEnvVars: {}
     ## taints: {}
@@ -38,8 +38,8 @@ wordpress:
   image:
     ## registry: 
     ## registrySecret:
-    repo: wordpress
-    tag:  php8.0-apache
+    repo: MIREPO
+    tag:  MI-TAG
     port: 80
     persistentPath: /var/www/html
 
@@ -68,16 +68,16 @@ wordpress:
     ## por ende un volumen persistente
     ## En false no utilziar nunca en un entorno de producción. 
     ## SOLO PARA PRUEBAS lo dejaré en false.
-    enabled: false
+    enabled: true
     
     existingClaim:
       enabled: false
-      name: ~
+      name: miclaim
 
     ## Los siguientes datos se ignoran si se activa 
     ## existingClaim.enabled   
     storageClassName: ""
-    capacity: ~
+    capacity: 110Gi
     accessModes:
         #- ReadWriteOnce
         #- ReadOnceMany

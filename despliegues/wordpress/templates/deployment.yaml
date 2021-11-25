@@ -30,24 +30,28 @@ spec:
             {{- end }}
             volumes:
                 - name: datos
+                {{- if .Values.wordpress.persistence.enabled }}
                   persistentVolumeClaim:
-                    claimName: wordpress-pvc
-                
+                    claimName: {{ if .Values.wordpress.persistence.existingClaim.enabled }}
+                               {{- .Values.wordpress.persistence.existingClaim.name }}
+                               {{- else }}
+                               {{- .Release.Name }}-pvc-wordpress
+                               {{- end }}
+                {{- else }}
+                  emptyDir: {}  
+                {{- end }}
             containers:
-                - image: wordpress:php8.0-apache
+                - image:  {{ .Values.wordpress.image.repo }}:{{ .Values.wordpress.image.tag }}
                   name: wordpress
-                  resources:
-                    requests:
-                        memory: 1024Mi
-                        cpu: 1
-                    limits:
-                        memory: 1024Mi
-                        #cpu: ~
+                  {{- with .Values.wordpress.deploy.resources }}
+                  resources: 
+                      {{- toYaml . | nindent 22 }}
+                  {{- end }}
                   volumeMounts:
                     - name: datos
-                      mountPath: /var/www/html
+                      mountPath: {{ .Values.wordpress.image.persistentPath }}
                   ports:
-                    - containerPort: 80
+                    - containerPort: {{ .Values.wordpress.image.port }}
                   env: 
                       - name: WORDPRESS_DB_HOST
                         value: ivanmdb-mariadb
