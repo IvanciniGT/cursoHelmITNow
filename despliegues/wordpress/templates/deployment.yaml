@@ -2,20 +2,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata: 
-    name: mi-wp
+    name: {{ .Release.Name}}-deployment-wordpress
 spec:
-    replicas: 1
+    replicas: {{ .Values.wordpress.deploy.initialReplicaCount }}
     
     selector:
         matchLabels:
-            app: wordpress
+            app: {{ .Release.Name }}-wordpress
     
     template:
         metadata:
             labels:
-                app: wordpress
+                app: {{ .Release.Name }}-wordpress
+                {{- with .Values.wordpress.extraLabels }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+
         spec:
-            affinity: {}
+
+            {{- with .Values.wordpress.deploy.affinity }}
+            affinity: 
+                {{- toYaml . | nindent 16 }}
+            {{- end }}
+            {{- with .Values.wordpress.deploy.tolerations }}
+            tolerations: 
+                {{- toYaml . | nindent 16 }}
+            {{- end }}
             volumes:
                 - name: datos
                   persistentVolumeClaim:

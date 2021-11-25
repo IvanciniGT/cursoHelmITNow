@@ -4,22 +4,24 @@ wordpress:
 
   deploy:
   
-    initialReplicaCount: 1
+    initialReplicaCount: 58
   
     autoscale:
-      enabled: false
+      enabled: true
       min: 1
       max: 10
       ## Al menos debe suministrarse uno de estos valores en caso de activar 
       ## wordpress.deploy.autoscale.enabled
-      cpu: ~
-      memory: ~
+      cpu: 2
+      memory: 2000Mi
       
     ## allowed:       No se define antiafinidad
     ## disallowed:    Defino antiafinidad, de tipo REQUIRED
     ## discouraged:   Defino antiafinidad, de tipo PREFERRED
     allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
     affinity: {}
+      #patata: grande
+      #pera: limonera
     
     resources:
       requests:
@@ -86,7 +88,7 @@ wordpress:
 ## Y si la monto yo? desde este chart? Esto no vale, 
 ## ya que queremos usar el chart de bitnami/mariadb
 externalDB:
-  enabled: false
+  enabled: true
   ## Nombre de la base de datos a montar
   host: ~
   port: 3306
@@ -98,12 +100,12 @@ externalDB:
     ## Si se activa existingSecret.enabled 
     ## se ignora este campo
 
-    password: ~
+    password: "change-me"
 
     existingSecret: 
       ## Si se activa, se debe suministrar un secreto creado externamente
       ## se ignora el campo db.auth.password
-      enabled: false
+      enabled: true
       ## Nombre del secreto existente
       name: ~
       ## Nombre la clave que contiene la contraseña. 
@@ -112,7 +114,7 @@ externalDB:
 
 mariadb:
   
-  enabled: true
+  enabled: false
   
   # nameOverride: ""
   # fullnameOverride: ""
@@ -125,7 +127,7 @@ mariadb:
     database: "wordpress"
     username: "usuario"
     password: "change-me"
-    # existingSecret: ~
+    existingSecret: patata
 
   primary:
     persistence:

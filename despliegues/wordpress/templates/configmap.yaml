@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata: 
-    name: {{ .Release.Name }}-wordpress-config
+    name: {{ .Release.Name }}-configmap-wordpress
 data:
     USUARIO: {{ if .Values.externalDB.enabled -}}
                 {{- .Values.externalDB.auth.username -}}
