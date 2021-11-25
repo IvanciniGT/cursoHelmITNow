@@ -54,19 +54,38 @@ spec:
                     - containerPort: {{ .Values.wordpress.image.port }}
                   env: 
                       - name: WORDPRESS_DB_HOST
-                        value: ivanmdb-mariadb
+                        value: {{ if .Values.externalDB.enabled -}}
+                                {{- .Values.externalDB.host -}}
+                                {{- else -}}
+                                {{- .Release.Name -}}-mariadb
+                                {{- end }}
                       - name: WORDPRESS_DB_USER
                         valueFrom: 
                             configMapKeyRef:
-                                name: wordpress-configuracion
+                                name: {{ .Release.Name }}-configmap-wordpress
                                 key:  USUARIO
                       - name: WORDPRESS_DB_PASSWORD
                         valueFrom: 
                             secretKeyRef:
-                                name: mariadb-secretos
-                                key:  mariadb-password
+                            {{- if .Values.externalDB.enabled }}
+                                {{- if .Values.externalDB.auth.existingSecret.enabled }}
+                                name: {{ .Values.externalDB.auth.existingSecret.name }}
+                                key:  {{ .Values.externalDB.auth.existingSecret.key }}
+                                {{- else }}
+                                name: {{ .Release.Name }}-secret-wordpress
+                                key: CONTRASENA
+                                {{- end }}
+                            {{- else }}
+                                {{- if .Values.mariadb.auth.existingSecret }}
+                                name: {{ .Values.mariadb.auth.existingSecret }}
+                                key:  {{ .Values.mariadb.auth.existingSecret }}
+                                {{- else }}
+                                name: {{ .Release.Name }}-mariadb
+                                key: mariadb-password
+                                {{- end }}
+                            {{- end }}
                       - name: WORDPRESS_DB_NAME
                         valueFrom: 
                             configMapKeyRef:
-                                name: wordpress-configuracion
+                                name: {{ .Release.Name }}-configmap-wordpress
                                 key:  BASE_DE_DATOS

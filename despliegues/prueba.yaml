@@ -1,12 +1,117 @@
 ---
+# Source: wordpress/charts/mariadb/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: RELEASE-NAME-mariadb
+  namespace: "miweb"
+  labels:
+    app.kubernetes.io/name: mariadb
+    helm.sh/chart: mariadb-10.0.2
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+automountServiceAccountToken: false
+---
+# Source: wordpress/charts/mariadb/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: RELEASE-NAME-mariadb
+  namespace: "miweb"
+  labels:
+    app.kubernetes.io/name: mariadb
+    helm.sh/chart: mariadb-10.0.2
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+data:
+  mariadb-root-password: "Y2hhbmdlLW1l"
+  mariadb-password: "Y2hhbmdlLW1l"
+---
+# Source: wordpress/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata: 
+    name: RELEASE-NAME-secret-wordpress
+data:
+    CONTRASENA: Y2hhbmdlLW1l
+---
+# Source: wordpress/charts/mariadb/templates/primary/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: RELEASE-NAME-mariadb
+  namespace: "miweb"
+  labels:
+    app.kubernetes.io/name: mariadb
+    helm.sh/chart: mariadb-10.0.2
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+data:
+  my.cnf: |-
+    [mysqld]
+    skip-name-resolve
+    explicit_defaults_for_timestamp
+    basedir=/opt/bitnami/mariadb
+    plugin_dir=/opt/bitnami/mariadb/plugin
+    port=3306
+    socket=/opt/bitnami/mariadb/tmp/mysql.sock
+    tmpdir=/opt/bitnami/mariadb/tmp
+    max_allowed_packet=16M
+    bind-address=0.0.0.0
+    pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
+    log-error=/opt/bitnami/mariadb/logs/mysqld.log
+    character-set-server=UTF8
+    collation-server=utf8_general_ci
+    
+    [client]
+    port=3306
+    socket=/opt/bitnami/mariadb/tmp/mysql.sock
+    default-character-set=UTF8
+    plugin_dir=/opt/bitnami/mariadb/plugin
+    
+    [manager]
+    port=3306
+    socket=/opt/bitnami/mariadb/tmp/mysql.sock
+    pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
+---
 # Source: wordpress/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata: 
     name: RELEASE-NAME-configmap-wordpress
 data:
-    USUARIO: 
-    BASE_DE_DATOS:
+    USUARIO: usuario
+    BASE_DE_DATOS: wordpress
+---
+# Source: wordpress/charts/mariadb/templates/primary/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: RELEASE-NAME-mariadb
+  namespace: "miweb"
+  labels:
+    app.kubernetes.io/name: mariadb
+    helm.sh/chart: mariadb-10.0.2
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
+  annotations:
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: mysql
+      port: 3306
+      protocol: TCP
+      targetPort: mysql
+      nodePort: null
+  selector: 
+    app.kubernetes.io/name: mariadb
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/component: primary
 ---
 # Source: wordpress/templates/service.yaml
 apiVersion: v1
@@ -27,7 +132,7 @@ kind: Deployment
 metadata: 
     name: RELEASE-NAME-deployment-wordpress
 spec:
-    replicas: 58
+    replicas: 1
     
     selector:
         matchLabels:
@@ -41,16 +146,17 @@ spec:
         spec:
             volumes:
                 - name: datos
-                  persistentVolumeClaim:
-                    claimName: RELEASE-NAME-pvc-wordpress
+                  emptyDir: {}
             containers:
-                - image:  MIREPO:MI-TAG
+                - image:  wordpress:php8.0-apache
                   name: wordpress
                   resources:
                       limits:
-                        cpu: 2
+                        cpu: null
+                        memory: null
                       requests:
-                        memory: 10Gi
+                        cpu: null
+                        memory: 2Gi
                   volumeMounts:
                     - name: datos
                       mountPath: /var/www/html
@@ -58,47 +164,151 @@ spec:
                     - containerPort: 80
                   env: 
                       - name: WORDPRESS_DB_HOST
-                        value: ivanmdb-mariadb
+                        value: RELEASE-NAME-mariadb
+                      - name: WORDPRESS_DB_PORT
+                        value: "3306"
                       - name: WORDPRESS_DB_USER
                         valueFrom: 
                             configMapKeyRef:
-                                name: wordpress-configuracion
+                                name: RELEASE-NAME-configmap-wordpress
                                 key:  USUARIO
                       - name: WORDPRESS_DB_PASSWORD
                         valueFrom: 
                             secretKeyRef:
-                                name: mariadb-secretos
-                                key:  mariadb-password
+                                name: RELEASE-NAME-mariadb
+                                key: mariadb-password
                       - name: WORDPRESS_DB_NAME
                         valueFrom: 
                             configMapKeyRef:
-                                name: wordpress-configuracion
+                                name: RELEASE-NAME-configmap-wordpress
                                 key:  BASE_DE_DATOS
 ---
-# Source: wordpress/templates/hpa.yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata: 
-    name:  RELEASE-NAME-hpa-wordpress
+# Source: wordpress/charts/mariadb/templates/primary/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: RELEASE-NAME-mariadb
+  namespace: miweb
+  labels:
+    app.kubernetes.io/name: mariadb
+    helm.sh/chart: mariadb-10.0.2
+    app.kubernetes.io/instance: RELEASE-NAME
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: primary
 spec:
-    scaleTargetRef:
-        apiVersion: apps/v1
-        kind: Deployment
-        name: RELEASE-NAME-deployment-wordpress
-    
-    minReplicas: 1
-    maxReplicas: 10
-    
-    # Metricas
-    #targetCPUUtilizationPercentage: 50
-    metrics:
-        - type: Resource
-          resource:
-            name: cpu
-            type: Utilization
-            averageUtilization: 2
-        - type: Resource
-          resource:
-            name: memory
-            type: Utilization
-            averageUtilization: 2000Mi
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels: 
+      app.kubernetes.io/name: mariadb
+      app.kubernetes.io/instance: RELEASE-NAME
+      app.kubernetes.io/component: primary
+  serviceName: RELEASE-NAME-mariadb
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/configuration: 2ed97852d2e3686756c48de296f8d96a1a1784bfc585c6bbc869789f4e0d46b5
+      labels:
+        app.kubernetes.io/name: mariadb
+        helm.sh/chart: mariadb-10.0.2
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: primary
+    spec:
+      
+      serviceAccountName: RELEASE-NAME-mariadb
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: mariadb
+                    app.kubernetes.io/instance: RELEASE-NAME
+                    app.kubernetes.io/component: primary
+                namespaces:
+                  - "miweb"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: mariadb
+          image: docker.io/bitnami/mariadb:10.5.13-debian-10-r6
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-mariadb
+                  key: mariadb-root-password
+            - name: MARIADB_USER
+              value: "usuario"
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-mariadb
+                  key: mariadb-password
+            - name: MARIADB_DATABASE
+              value: "wordpress"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  password_aux="${MARIADB_ROOT_PASSWORD:-}"
+                  if [[ -f "${MARIADB_ROOT_PASSWORD_FILE:-}" ]]; then
+                      password_aux=$(cat "$MARIADB_ROOT_PASSWORD_FILE")
+                  fi
+                  mysqladmin status -uroot -p"${password_aux}"
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+            exec:
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  password_aux="${MARIADB_ROOT_PASSWORD:-}"
+                  if [[ -f "${MARIADB_ROOT_PASSWORD_FILE:-}" ]]; then
+                      password_aux=$(cat "$MARIADB_ROOT_PASSWORD_FILE")
+                  fi
+                  mysqladmin status -uroot -p"${password_aux}"
+          resources: 
+            limits: {}
+            requests: {}
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/mariadb
+            - name: config
+              mountPath: /opt/bitnami/mariadb/conf/my.cnf
+              subPath: my.cnf
+      volumes:
+        - name: config
+          configMap:
+            name: RELEASE-NAME-mariadb
+        - name: data
+          emptyDir: {}

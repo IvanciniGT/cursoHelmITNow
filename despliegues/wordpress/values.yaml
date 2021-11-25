@@ -23,11 +23,11 @@ wordpress:
     
     resources:
       requests:
-          memory: ~
-          cpu: ~
+          memory: 1Gi
+          cpu: 1
       limits:
-          memory: ~
-          cpu: ~
+          memory: 2Gi
+          cpu: 1
     
     extraEnvVars: {}
     ## taints: {}
@@ -43,14 +43,14 @@ wordpress:
 
   service:
     ## Por defecto el servicio se llamará RELEASE-wordpress
-    #nameOverride:
+    nameOverride:
       
       ## Puede cambiarse la parte de "wordpress" con la siguiente propiedad
-      #suffixOverride: ~
+      suffixOverride: ~
       
       ## Puede cambiarse a uno fijo con la soiguiente propiedad.
       ## En cuyo caso se ignora la propiedad: wordpress.service.override.suffixOverride
-      #fullOverride:   ~
+      fullOverride:   ~
       
     type: ClusterIP # NodePort # LoadBalancer
     port: 80
@@ -116,9 +116,9 @@ mariadb:
   
   # nameOverride: ""
   # fullnameOverride: ""
-  # service:
-  #   ports:
-  #     mysql: 3306
+  service:
+   ports:
+     mysql: 3306
   
   auth:
     rootPassword: "change-me"

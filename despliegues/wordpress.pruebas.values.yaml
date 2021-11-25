@@ -88,10 +88,10 @@ wordpress:
 ## Y si la monto yo? desde este chart? Esto no vale, 
 ## ya que queremos usar el chart de bitnami/mariadb
 externalDB:
-  enabled: true
+  enabled: false
   ## Nombre de la base de datos a montar
   host: ~
-  port: 3306
+  port: "3306"
   name: ~
 
   auth:
@@ -114,20 +114,20 @@ externalDB:
 
 mariadb:
   
-  enabled: false
+  enabled: true
   
   # nameOverride: ""
   # fullnameOverride: ""
-  # service:
-  #   ports:
-  #     mysql: 3306
+  service:
+   ports:
+    mysql: "3306"
   
   auth:
     rootPassword: "change-me"
     database: "wordpress"
     username: "usuario"
     password: "change-me"
-    existingSecret: patata
+    existingSecret: ~
 
   primary:
     persistence:

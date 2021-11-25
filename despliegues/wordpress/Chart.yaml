@@ -5,3 +5,9 @@ appVersion: "8.0.0"          # Versión de Wordpress que vamos a montar
 name: wordpress
 description: Chart para instalar wordpress
 type: application
+
+dependencies:
+    - name: mariadb
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.x.x
+      condition: mariadb.enabled
