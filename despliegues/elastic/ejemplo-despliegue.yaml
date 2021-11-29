@@ -1,0 +1,517 @@
+# Maestros
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+    name: configuracion-es
+
+data:
+    cluster.name: MiCluster
+    xpack.license.self_generated.type: basic
+    xpack.security.enabled: true
+    cluster.routing.allocation.disk.threshold_enabled: false
+    cluster.join.timeout: 180s
+    cluster.publish.timeout: 180s
+      
+---
+kind: Secret
+apiVersion: v1
+
+metadata:
+    name: secretos-es
+
+data:
+    elastic-user-password: cGFzc3dvcmQ=
+---# Maestros
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+    name: configuracion-master-es
+
+data:
+    ES_JAVA_OPTS: "-Xms512m -Xmx512m" 
+---
+# Edsto otro solo lo monto por comodidadkind: ConfigMap
+apiVersion: v1
+
+metadata:
+    name: configuracion-data-es
+
+data:
+    ES_JAVA_OPTS: "-Xms1024m -Xmx1024m" 
+---
+# Edsto otro solo lo monto por comodidad
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+    # NO TOCAR ESTE CONFIGMAP!!!!! BAJO PENA CAPITAL .... Tengo el cuchillo preparado 
+    name: defaults-es
+
+data:
+    # NO TOCAR ESTE CONFIGMAP!!!!!
+    discovery.seed_hosts: es-master-svc
+    node.master: "false"
+    node.data: "false"
+    node.ingest: "false"
+---
+
+#########################################################################################################
+###     MAESTROS
+#########################################################################################################
+
+kind: Service
+apiVersion: v1
+
+metadata:
+    name: es-master-svc
+
+spec:
+    type: ClusterIP # Este servicio es privado por naturaleza
+    selector:
+        app: es-master
+    ports:
+        - name: externo
+          port: 9200
+          targetPort: 9200
+        - name: interno
+          port: 9300
+          targetPort: 9300
+---
+#########################################################################################################
+
+kind: StatefulSet
+apiVersion: apps/v1
+
+metadata:
+    name: es-master
+    labels: 
+        app: es
+        tipo-nodo: master
+        
+spec:
+
+    replicas: 2
+    # que nombre van a recibir cada una de las replicas que generemos en este statefulset:
+    # Los nombres son CONOCIDOS A PRIORI:
+    #   es-master-0
+    #   es-master-1
+
+    selector:
+        matchLabels:
+        app: es
+        tipo-nodo: master
+
+    serviceName: es-master-svc
+    #   es-master-0.es-master-svc
+    #   es-master-1.es-master-svc
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: es
+                tipo-nodo: master
+        spec:
+            containers:
+                -   name: elasticsearch
+                    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+                    ports:
+                        - containerPort: 9200 # Se usa para comunicaciones externas
+                        - containerPort: 9300 # Se usa para comunicaciones internas
+                    envFrom:
+                        - configMapRef: 
+                            name: configuracion-es
+                        - configMapRef: 
+                            name: defaults-es
+                        - configMapRef:
+                            name: configuracion-master-es
+                    env:
+                        - name: node.name # Debe ser único en el cluster
+                          valueFrom: 
+                            fieldRef:
+                                fieldPath: metadata.name # Propiedad name, del metadata del POD que se genere desde esta plantilla
+
+                        - name: discovery.seed_hosts   # Maquinas. las puedo identificar en red a traves de una IP o nombre DNS
+                          # A quien le digo yo a este nodo conreto de ES que conoce de antemano
+                          value: es-master-0.es-master-svc,es-master-1.es-master-svc
+                        - name: cluster.initial_master_nodes   # Habla de nodos (nombre) a nivel de ES
+                          value: es-master-0,es-master-1
+                        - name: node.master
+                          value: "true"
+                        - name: ELASTIC_PASSWORD
+                          valueFrom:
+                            secretKeyRef:
+                                name: secretos-es
+                                key: elastic-user-password
+
+                    volumeMounts:
+                        - name: datos-elasticsearch
+                          mountPath: /usr/share/elasticsearch/data
+                    resources: {}
+                        #requests:
+                        #    cpu: ~
+                        #    memory: ~ 
+                        #limits:
+                    affinity: {}
+                        # Antiafinidad casi por defecto
+                    tolerations: {}
+
+    ### Para tener 1 volumen por pod
+    volumeClaimTemplates: # Plantilla de peticiones de Volumen 
+        -   metadata:
+                name: datos-elasticsearch
+
+            spec:
+                storageClassName: redundante # Tipo de volumen que necesito (Caractersisticas del volumen)
+                resources:
+                    requests:
+                        storage: 5Gi
+                accessModes:
+                    - ReadWriteOnce
+---
+# Data
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: es-data
+    labels:
+        app: es
+        tipo-nodo: data
+spec:
+    replicas: 2
+    serviceName: es-data-svc
+    selector:
+        matchLabels:
+            app: es
+            tipo-nodo: data
+    template:
+        metadata:
+            labels:
+                app: es
+                tipo-nodo: data
+        spec:
+            containers:
+                -   name: es-data
+                    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.1
+                
+                    ports: 
+                        - containerPort: 9200
+                        - containerPort: 9300
+                
+                    envFrom:
+                        - configMapRef: 
+                            name: configuracion-es
+                        - configMapRef: 
+                            name: defaults-es
+                        - configMapRef:
+                            name: configuracion-data-es
+                    env:
+                        - name: node.name # Debe ser único en el cluster
+                          valueFrom: 
+                            fieldRef:
+                                fieldPath: metadata.name # Propiedad name, del metadata del POD que se genere desde esta plantilla
+                        - name: node.data
+                          value: "true"
+                        - name: ELASTIC_PASSWORD
+                          valueFrom:
+                            secretKeyRef:
+                                name: secretos-es
+                                key: elastic-user-password
+
+                    volumeMounts:
+                        - name: datos-elasticsearch
+                          mountPath: /usr/share/elasticsearch/data
+                    resources: {}
+                        #requests:
+                        #    cpu: ~
+                        #    memory: ~ 
+                        #limits:
+                    affinity: {}
+                        # Antiafinidad casi por defecto
+                    tolerations: {}
+
+    ### Para tener 1 volumen por pod
+    volumeClaimTemplates: # Plantilla de peticiones de Volumen 
+        -   metadata:
+                name: datos-elasticsearch
+
+            spec:
+                storageClassName: redundante # Tipo de volumen que necesito (Caractersisticas del volumen)
+                resources:
+                    requests:
+                        storage: 5Gi
+                accessModes:
+                    - ReadWriteOnce
+---
+
+# Coordinadores
+kind: Service
+apiVersion: v1
+metadata:
+  name: coordinator-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: es
+    tipo-nodo: coordinator
+  ports:
+  - name: externo
+    port: 9200
+    targetPort: 9200
+  - name: interno
+    port: 9300
+    targetPort: 9300
+
+---
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: coordinator-cm
+
+data:
+  cluster.name: MiCluster
+  ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: es
+    tipo-nodo: coordinator
+  name: coordinator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: es
+      tipo-nodo: coordinator
+  serviceName: es-coordinator-svc
+  template:
+    metadata:
+      labels:
+        app: es
+        tipo-nodo: coordinator
+    spec:
+      containers:
+      - image: docker.elastic.co/elasticsearch/elasticsearch:7.11.2
+        name: elasticsearch
+        ports:
+        - containerPort: 9200
+        - containerPort: 9300
+        resources: {}
+        envFrom:
+        - configMapRef:
+            name: default-es # ConfigMap comun al cluster de elastic
+        - configMapRef:
+            name: configuracion-es
+        - configMapRef:
+            name: coordinator-cm # ConfigMap con la configuracion propio de los nodos coordinadores
+        env:
+        - name: node.name
+          valueFrom: 
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+                name: secretos-es
+                key: elastic-user-password
+    volumeMounts:
+        - name: datos-elasticsearch
+          mountPath: /usr/share/elasticsearch/data
+    resources:
+      requests:
+        cpu:
+        memory:
+    affinity: {}
+    tolerations: {}
+
+  volumeClaimTemplates:
+      - metadata:
+          name: datos-elasticsearch
+      spec:
+        storageClassName: redundante
+        resources:
+          requests:
+            storage: 5Gi
+            accessModes:
+            - ReadWriteOnce
+# Ingestas
+# Kibana
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+    name: ingest-svc
+spec:
+    type: ClusterIP
+    selector:
+        app: es
+        tipo-nodo: ingest
+    ports:
+        - name: externo
+          port: 9200
+          targetPort: 9200
+        - name: interno
+          port: 9300
+          targetPort: 9300
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: ingest
+    labels: 
+        app: es
+        tipo-nodo: ingest
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: es
+        tipo-nodo: ingest
+    serviceName: es-ingest-svc
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: es
+                tipo-nodo: ingest
+        spec:
+          containers:
+            - name: elasticSearch
+              image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              resources: {}
+              ports:
+                - containerPort: 9200
+                - containerPort: 9300
+              envFrom:
+                - configMapRef:
+                    name: default-es 
+                - configMapRef: 
+                    name: configuracion-es
+                - configMapRef: 
+                    name: ingest-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: secretos-es
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: redundante
+                resources:
+                    requests:
+                        storage: 5Gi
+                accessModes:
+                    - ReadWriteOnce
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: ingest-public
+spec:
+  rules:
+  - host: www.elastic-ingest.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: es-ingest-svc
+            port:
+              number: 9200
+        path: /
+        pathType: Prefix
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: coordinator-public
+spec:
+  rules:
+  - host: www.elastic-coordinator.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: es-coordinator-svc
+            port:
+              number: 9200
+        path: /
+        pathType: Prefix
+---
+# SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  selector:
+    app: kibana
+  type: ClusterIP
+  ports:
+    - port: 5601
+      targetPort: 5601
+---
+#  KIBANA
+apiVersion: apps/v1
+kind: Deployemnt
+metadata:
+  name: kibana 
+template:
+  replicas: 1
+  metadata:
+      app: kibana
+  spec:
+    selector:
+      app: kibana
+    containers:
+      -   image: kibana:7.11
+          name: kibana
+          ports: 
+           - port: 5601
+             targetport: 5601
+          env:
+            ELASTICSEARCH_HOSTS: "https://es-coordinator-svc:9200"
+            SERVER_NAME: "kibana"
+            SERVER_HOST: "kibana"
+            - name: ELASTIC_USER
+              value: ELASTIC
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secretos-es
+                  key: elastic-user-password
+          resources:
+            requests:
+              cpu: ~
+              memory: ~
+            limits: 
+              cpu: ~
+              memory: ~
+          tolerations: {}
+          affinity: {}
+          nodeSelector: {}
+          
