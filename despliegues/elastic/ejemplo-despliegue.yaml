@@ -466,7 +466,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kibana
+  name: kibana-svc
 spec:
   selector:
     app: kibana
@@ -494,9 +494,16 @@ template:
            - port: 5601
              targetport: 5601
           env:
-            ELASTICSEARCH_HOSTS: "https://es-coordinator-svc:9200"
-            SERVER_NAME: "kibana"
-            SERVER_HOST: "kibana"
+            - name: ELASTICSEARCH_HOSTS
+              value: "https://es-coordinator-svc:9200"
+            - name: SERVER_NAME
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+            - name: SERVER_HOST
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
             - name: ELASTIC_USER
               value: ELASTIC
             - name: ELASTIC_PASSWORD
@@ -514,4 +521,24 @@ template:
           tolerations: {}
           affinity: {}
           nodeSelector: {}
-          
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  name: kibana-public
+spec:
+  rules:
+  - host: www.kibana.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: kibana-svc
+            port:
+              number: 5601
+        path: /
+        pathType: Prefix
+---

@@ -1,0 +1,30 @@
+#Configuraciones de Kibana
+kibana:
+    deployment:
+        replicas: 1
+        image:
+            repo: kibana
+            tag:  7.11
+            port: 5601
+        
+        resources: {}
+        annotations: {}
+        extraLabels: {}
+        tolerations: {}
+        affinities: {}
+        defaultAntiPodAffinity: true
+        extraEnv: {}
+        #sidecars: {}
+        #initContainers: {}
+        #extraVolumes: {}
+        
+    service:
+        type: ClusterIP # etc...
+        port: 5601
+        nodePort: ~
+        loadBalancerIP: ~
+    
+    ingress:
+        enabled: false
+        host: www.kibana.es
+        path: /
