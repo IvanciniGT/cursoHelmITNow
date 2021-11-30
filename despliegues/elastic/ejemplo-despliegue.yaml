@@ -271,7 +271,6 @@ metadata:
   name: coordinator-cm
 
 data:
-  cluster.name: MiCluster
   ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
 
 ---

@@ -1,12 +1,157 @@
+#tag:  7.11.2
+
+elastic:
+  #app: es ## Generamos esta label a nivel de cluster???
+  image:
+    repo: elasticsearch
+    #tag:  7.11.2
+    private-port: 9300
+    public-port: 9200
+
+  auth:
+      elastic-user-password: cGFzc3dvcmQ=
+
+  conf:
+    cluster.name: MiCluster
+    xpack.license.self_generated.type: basic
+    xpack.security.enabled: true
+    cluster.routing.allocation.disk.threshold_enabled: false
+    cluster.join.timeout: 180s
+    cluster.publish.timeout: 180s
+
+  persistence:
+    enabled: false
+    storageClassName: ""
+    capacity: ~
+    accessModes:
+        #- ReadWriteOnce
+        #- ReadOnceMany
+        - ReadWriteMany
+        #- ReadWriteOncePod
+
+master:
+    deploy:
+        replicas: 2
+        resources:
+            requests:
+                memory: 2Gi
+                cpu: 1
+            limits:
+                memory: 2Gi
+                cpu: 1
+        annotations: {}
+        extraLabels: {}
+        tolerations: {}
+        affinities: {}
+        #allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
+        defaultAntiPodAffinity: true
+        extraEnv: {}
+        conf:
+          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+    
+data:
+    deploy:
+        replicas: 2
+        resources:
+            requests:
+                memory: 2Gi
+                cpu: 1
+            limits:
+                memory: 2Gi
+                cpu: 1
+        annotations: {}
+        extraLabels: {}
+        tolerations: {}
+        affinities: {}
+        #allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
+        defaultAntiPodAffinity: true
+        extraEnv: {}
+        conf:
+          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+    
+ingest:
+    deploy:
+        replicas: 0
+        resources:
+            requests:
+                memory: 2Gi
+                cpu: 1
+            limits:
+                memory: 2Gi
+                cpu: 1
+        annotations: {}
+        extraLabels: {}
+        tolerations: {}
+        affinities: {}
+        #allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
+        defaultAntiPodAffinity: true
+        extraEnv: {}
+        conf:
+          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+    
+    service:
+        name:
+            suffix-override:
+            full-override: 
+        type: ClusterIP
+        private-port: 9300
+        public-port: 9200
+        nodePort:
+        loadBalancerIP:
+
+    ingress:
+        enabled: false
+        host: www.elastic-ingest.com
+        path: /
+  
+coordinator:
+
+    deploy:
+        replicas: 0
+        resources:
+            requests:
+                memory: 2Gi
+                cpu: 1
+            limits:
+                memory: 2Gi
+                cpu: 1
+        annotations: {}
+        extraLabels: {}
+        tolerations: {}
+        affinities: {}
+        #allowReplicaDeploymentOnSameNode: allowed # disallowed, discouraged
+        defaultAntiPodAffinity: true
+        extraEnv: {}
+        conf:
+          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+          
+    service: # REALEASE_NAME-coordinator-svc
+        name:
+            suffix-override:
+            full-override: 
+        type: ClusterIP
+        private-port: 9300
+        public-port: 9200
+        nodePort:
+        loadBalancerIP:
+
+    ingress:
+        enabled: false
+        host: www.elastic-coordinator.com
+        path: /
+  
+  
+  
+
 #Configuraciones de Kibana
 kibana:
-    deployment:
+    image:
+        repo: kibana
+        #tag:  7.11
+        port: 5601
+
+    deploy:
         replicas: 1
-        image:
-            repo: kibana
-            tag:  7.11
-            port: 5601
-        
         resources: {}
         annotations: {}
         extraLabels: {}
@@ -19,6 +164,9 @@ kibana:
         #extraVolumes: {}
         
     service:
+        name:
+            suffix-override:
+            full-override: 
         type: ClusterIP # etc...
         port: 5601
         nodePort: ~
