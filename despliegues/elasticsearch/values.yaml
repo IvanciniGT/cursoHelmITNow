@@ -5,31 +5,37 @@ elastic:
   image:
     repo: elasticsearch
     #tag:  7.11.2
-    private-port: 9300
-    public-port: 9200
+    ports: 
+        private: 9300
+        public: 9200
+    dataPath:
 
   auth:
-      elastic-user-password: cGFzc3dvcmQ=
+      password: password
 
   conf:
     cluster.name: MiCluster
     xpack.license.self_generated.type: basic
-    xpack.security.enabled: true
-    cluster.routing.allocation.disk.threshold_enabled: false
+    xpack.security.enabled: "true"
+    cluster.routing.allocation.disk.threshold_enabled: "false"
     cluster.join.timeout: 180s
     cluster.publish.timeout: 180s
 
   persistence:
-    enabled: false
-    storageClassName: ""
-    capacity: ~
+    enabled: true
+    storageClassName: "cluster-nfs"
+    capacity: 10Gb
     accessModes:
         #- ReadWriteOnce
         #- ReadOnceMany
-        - ReadWriteMany
-        #- ReadWriteOncePod
+        #- ReadWriteMany
+        - ReadWriteOncePod
 
 master:
+    image:
+        repo: elasticsearch
+        #tag:  7.11.2
+        dataPath:
     deploy:
         replicas: 2
         resources:
@@ -49,6 +55,17 @@ master:
         conf:
           ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
     
+    service:
+        name:
+            suffixOverride:
+            fullOverride: 
+        type: ClusterIP
+        ports:
+            private: 9300
+            public: 9200
+        nodePort:
+        loadBalancerIP:
+
 data:
     deploy:
         replicas: 2
@@ -71,7 +88,7 @@ data:
     
 ingest:
     deploy:
-        replicas: 0
+        replicas: 2
         resources:
             requests:
                 memory: 2Gi
@@ -91,11 +108,12 @@ ingest:
     
     service:
         name:
-            suffix-override:
-            full-override: 
+            suffixOverride:
+            fullOverride: 
         type: ClusterIP
-        private-port: 9300
-        public-port: 9200
+        ports:
+            private: 9300
+            public: 9200
         nodePort:
         loadBalancerIP:
 
@@ -127,8 +145,8 @@ coordinator:
           
     service: # REALEASE_NAME-coordinator-svc
         name:
-            suffix-override:
-            full-override: 
+            suffixOverride:
+            fullOverride: 
         type: ClusterIP
         private-port: 9300
         public-port: 9200
@@ -165,8 +183,8 @@ kibana:
         
     service:
         name:
-            suffix-override:
-            full-override: 
+            suffixOverride:
+            fullOverride: 
         type: ClusterIP # etc...
         port: 5601
         nodePort: ~

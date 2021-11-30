@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: {{ .Release.Name}}-ingest-es
+
+data:
+  {{- with .Values.ingest.deploy.conf }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

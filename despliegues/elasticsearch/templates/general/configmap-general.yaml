@@ -1,0 +1,11 @@
+# Maestros
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+    name: {{ include "elasticsearch.nombre-configmap-general" $ }}
+
+data:
+    {{- with .Values.elastic.conf }}
+    {{- toYaml . | nindent 2 }}
+    {{- end }}

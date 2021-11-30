@@ -1,0 +1,13 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+    # NO TOCAR ESTE CONFIGMAP!!!!! BAJO PENA CAPITAL .... Tengo el cuchillo preparado 
+    name: {{ include "elasticsearch.nombre-configmap-default" $ }}
+
+data:
+    # NO TOCAR ESTE CONFIGMAP!!!!!
+    discovery.seed_hosts: {{ include "elasticsearch.nombre-servicio-maestro" $ }}
+    node.master: "false"
+    node.data: "false"
+    node.ingest: "false"
