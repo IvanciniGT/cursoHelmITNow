@@ -494,7 +494,7 @@ template:
              targetport: 5601
           env:
             - name: ELASTICSEARCH_HOSTS
-              value: "https://es-coordinator-svc:9200"
+              value: "https://{{ include "elasticsearch.nombre-servicio-coordinacion" $ }}:{{ .Values.coordinator.service.public-port }}"
             - name: SERVER_NAME
               valueFrom: 
                     fieldRef:
