@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+    name: {{ include "elasticsearch.nombre-servicio-coordinacion" $ }}
+spec:
+    type: {{ .Values.coordinator.service.type }}
+    selector:
+        app: {{ .Release.Name }}-es
+        tipo-nodo: coordinator
+    ports:
+        - name: externo
+          port: {{ .Values.coordinator.service.ports.public }}
+          targetPort: {{ .Values.elastic.image.ports.public }}
+        - name: interno
+          port: {{ .Values.coordinator.service.ports.private }}
+          targetPort: {{ .Values.elastic.image.ports.private }}

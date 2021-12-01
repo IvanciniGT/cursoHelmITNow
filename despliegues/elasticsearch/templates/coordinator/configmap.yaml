@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: {{ .Release.Name}}-coordinator-es
+
+data:
+  {{- with .Values.coordinator.deploy.conf }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

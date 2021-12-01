@@ -1,0 +1,18 @@
+# SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "elasticsearch.nombre-servicio-kibana" $ }}
+spec:
+  selector:
+    app: {{ .Release.Name }}-kibana
+  type: {{ .Values.kibana.service.type }}
+  ports:
+    - port: {{ .Values.kibana.service.port }}
+      targetPort: {{ .Values.kibana.service.port }}
+      {{- if and (eq (.Values.kibana.service.type) ("NodePort")) (.Values.kibana.service.nodePort ) }}
+      NodePort: {{ .Values.wordpress.service.nodePort }}
+      {{- end }}
+      {{- if and (eq (.Values.kibana.service.type) ("LoadBalancer")) (.Values.kibana.service.LoadBalancerIP) }}
+      LoadBalancerIP: {{ .Values.kibana.service.loadBalancerIP }}
+      {{- end }}

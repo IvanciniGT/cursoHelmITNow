@@ -9,6 +9,26 @@ metadata:
 data:
     elastic-user-password: cGFzc3dvcmQ=
 ---
+# Source: elasticsearch/templates/coordinator/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: RELEASE-NAME-coordinator-es
+
+data:
+  ES_JAVA_OPTS: -Xms1250m -Xmx1250m
+---
+# Source: elasticsearch/templates/data/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: RELEASE-NAME-data-es
+
+data:
+  ES_JAVA_OPTS: -Xms1250m -Xmx1250m
+---
 # Source: elasticsearch/templates/general/configmap-default.yaml
 kind: ConfigMap
 apiVersion: v1
@@ -50,6 +70,34 @@ metadata:
 data:
   ES_JAVA_OPTS: -Xms1250m -Xmx1250m
 ---
+# Source: elasticsearch/templates/master/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: RELEASE-NAME-master-es
+
+data:
+  ES_JAVA_OPTS: -Xms1250m -Xmx1250m
+---
+# Source: elasticsearch/templates/coordinator/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+    name: RELEASE-NAME-coordinator-svc
+spec:
+    type: ClusterIP
+    selector:
+        app: RELEASE-NAME-es
+        tipo-nodo: coordinator
+    ports:
+        - name: externo
+          port: 9200
+          targetPort: 9200
+        - name: interno
+          port: 9300
+          targetPort: 9300
+---
 # Source: elasticsearch/templates/ingest/service.yaml
 kind: Service
 apiVersion: v1
@@ -67,6 +115,156 @@ spec:
         - name: interno
           port: 9300
           targetPort: 9300
+---
+# Source: elasticsearch/templates/kibana/service.yaml
+# SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: RELEASE-NAME-kibana-svc
+spec:
+  selector:
+    app: RELEASE-NAME-kibana
+  type: ClusterIP
+  ports:
+    - port: 5601
+      targetPort: 5601
+---
+# Source: elasticsearch/templates/master/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+    name: RELEASE-NAME-master-svc
+spec:
+    type: ClusterIP
+    selector:
+        app: RELEASE-NAME-es
+        tipo-nodo: master
+    ports:
+        - name: externo
+          port: 9200
+          targetPort: 9200
+        - name: interno
+          port: 9300
+          targetPort: 9300
+---
+# Source: elasticsearch/templates/kibana/deployment.yaml
+#  KIBANA
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: RELEASE-NAME-kibana
+template:
+  replicas: 1
+  metadata:
+      app: RELEASE-NAME-kibana
+  spec:
+    selector:
+      app: RELEASE-NAME-kibana
+    containers:
+      -   image: kibana:7.12
+          name: kibana
+          ports: 
+           - port: 5601
+             targetport: 5601
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: 'https://RELEASE-NAME-coordinator-svc:9200'
+            - name: SERVER_NAME
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+            - name: SERVER_HOST
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+            - name: ELASTIC_USER
+              value: ELASTIC
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-secret
+                  key: elastic-user-password
+          resources:
+            requests:
+              cpu: ~
+              memory: ~
+            limits: 
+              cpu: ~
+              memory: ~
+          tolerations: {}
+          affinity: {}
+          nodeSelector: {}
+---
+# Source: elasticsearch/templates/data/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: RELEASE-NAME-data
+    labels: 
+        app: RELEASE-NAME-es
+        tipo-nodo: data
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: RELEASE-NAME-es
+        tipo-nodo: data
+        
+    serviceName: RELEASE-NAME-data-svc
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: RELEASE-NAME-es
+                tipo-nodo: data
+        spec:
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: elasticsearch:7.12
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              resources:
+                  limits:
+                    cpu: 1
+                    memory: 2Gi
+                  requests:
+                    cpu: 1
+                    memory: 2Gi
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-configmap-general
+                - configMapRef: 
+                    name: RELEASE-NAME-configmap-default
+                - configMapRef: 
+                    name: RELEASE-NAME-data-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: node.data
+                  value: "true"
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: RELEASE-NAME-secret
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: cluster-nfs
+                resources:
+                    requests:
+                        storage: 10Gb
+                accessModes:
+                  - ReadWriteOncePod
 ---
 # Source: elasticsearch/templates/ingest/statefulset.yaml
 apiVersion: apps/v1
@@ -120,6 +318,79 @@ spec:
                     fieldRef:
                        fieldPath: metadata.name
                 - name: node.ingest
+                  value: "true"
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: RELEASE-NAME-secret
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: cluster-nfs
+                resources:
+                    requests:
+                        storage: 10Gb
+                accessModes:
+                  - ReadWriteOncePod
+---
+# Source: elasticsearch/templates/master/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: RELEASE-NAME-master
+    labels: 
+        app: RELEASE-NAME-es
+        tipo-nodo: master
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: RELEASE-NAME-es
+        tipo-nodo: master
+        
+    serviceName: RELEASE-NAME-master-svc
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: RELEASE-NAME-es
+                tipo-nodo: master
+        spec:
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: elasticsearch:7.12
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              resources:
+                  limits:
+                    cpu: 1
+                    memory: 2Gi
+                  requests:
+                    cpu: 1
+                    memory: 2Gi
+              ports:
+                - containerPort: 9300
+                - containerPort: 9200
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-configmap-general
+                - configMapRef: 
+                    name: RELEASE-NAME-configmap-default
+                - configMapRef: 
+                    name: RELEASE-NAME-master-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: node.master
                   value: "true"
                 - name: ELASTIC_PASSWORD
                   valueFrom:

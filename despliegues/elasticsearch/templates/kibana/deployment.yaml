@@ -1,0 +1,55 @@
+---
+#  KIBANA
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-kibana
+spec:
+  replicas: {{ .Values.kibana.deploy.replicas }}
+  selector:
+    matchLabels:
+        app: {{ .Release.Name }}-kibana
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-kibana
+    spec:
+      {{- with .Values.kibana.deploy.tolerations }}
+      tolerations: 
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+       {{- with .Values.kibana.deploy.affinities }}
+      affinity: 
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+       {{- with .Values.kibana.deploy.nodeSelector }}
+      nodeSelector: 
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      -   image: {{ include "elasticsearch.imagen-kibana" $ }}
+          name: kibana
+           {{- with .Values.kibana.deploy.resources }}
+          resources: 
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports: 
+           - containerPort: {{ .Values.kibana.image.port}}
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: 'https://{{ include "elasticsearch.nombre-servicio-coordinacion" $ }}:{{ .Values.coordinator.service.ports.public }}'
+            - name: SERVER_NAME
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+            - name: SERVER_HOST
+              valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+            - name: ELASTIC_USER
+              value: ELASTIC
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "elasticsearch.nombre-secret-general" $ }}
+                  key: elastic-user-password

@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: {{ .Release.Name}}-master-es
+
+data:
+  {{- with .Values.master.deploy.conf }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

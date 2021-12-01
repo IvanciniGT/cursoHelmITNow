@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+    name: {{ include "elasticsearch.nombre-servicio-maestro" $ }}
+spec:
+    type: {{ .Values.master.service.type }}
+    selector:
+        app: {{ .Release.Name }}-es
+        tipo-nodo: master
+    ports:
+        - name: externo
+          port: {{ .Values.master.service.ports.public }}
+          targetPort: {{ .Values.elastic.image.ports.public }}
+        - name: interno
+          port: {{ .Values.master.service.ports.private }}
+          targetPort: {{ .Values.elastic.image.ports.private }}

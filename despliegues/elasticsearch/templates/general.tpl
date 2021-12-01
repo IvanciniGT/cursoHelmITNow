@@ -6,6 +6,10 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "elasticsearch.nombre-servicio-data" -}}
+{{- .Release.Name }}-data-svc
+{{- end -}}
+
 {{- define "elasticsearch.nombre-servicio-coordinacion" -}}
 {{- if .Values.coordinator.service.name.fullOverride -}}
 {{- .Values.coordinator.service.name.fullOverride -}}
@@ -47,7 +51,7 @@
 elasticsearch:7.12
 {{- end -}}
 
-{{ define "elasticsearch.imagen-kibana" }}
+{{- define "elasticsearch.imagen-kibana" -}}
 kibana:7.12
-{{ end }}
+{{- end -}}
 

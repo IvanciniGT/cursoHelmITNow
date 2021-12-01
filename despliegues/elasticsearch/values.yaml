@@ -148,8 +148,10 @@ coordinator:
             suffixOverride:
             fullOverride: 
         type: ClusterIP
-        private-port: 9300
-        public-port: 9200
+        ports:
+            private: 9300
+            public: 9200
+
         nodePort:
         loadBalancerIP:
 

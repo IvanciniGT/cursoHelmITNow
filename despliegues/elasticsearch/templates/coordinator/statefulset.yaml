@@ -1,0 +1,87 @@
+{{ if not ( eq ( .Values.coordinator.deploy.replicas ) ( 0.0 ) ) }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: {{ .Release.Name }}-coordinator
+    labels: 
+        app: {{ .Release.Name }}-es
+        tipo-nodo: coordinator
+spec:
+    replicas: {{ .Values.coordinator.deploy.replicas }}
+    selector:
+      matchLabels:
+        app: {{ .Release.Name }}-es
+        tipo-nodo: coordinator
+        
+    serviceName: {{ include "elasticsearch.nombre-servicio-coordinacion" $ }}
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: {{ .Release.Name }}-es
+                tipo-nodo: coordinator
+        spec:
+          {{- with .Values.coordinator.deploy.affinities }}
+          affinity: 
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          {{- with .Values.coordinator.deploy.tolerations }}
+          tolerations: 
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      
+          {{- with .Values.coordinator.deploy.extraLabels }}
+          extraLabels: 
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: {{ include "elasticsearch.imagen-elasticsearch" $ }}
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              {{- with .Values.coordinator.deploy.resources }}
+              resources: 
+                {{- toYaml . | nindent 18 }}
+              {{- end }}
+              ports:
+                - containerPort: {{ .Values.elastic.image.ports.private }}
+                - containerPort: {{ .Values.elastic.image.ports.public }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "elasticsearch.nombre-configmap-general" $ }}
+                - configMapRef: 
+                    name: {{ include "elasticsearch.nombre-configmap-default" $ }}
+                - configMapRef: 
+                    name: {{ .Release.Name}}-coordinator-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: {{ include "elasticsearch.nombre-secret-general" $ }}
+                            key: elastic-user-password
+                {{- with .Values.coordinator.deploy.extraEnv }}
+                  {{- toYaml . | nindent 16 }}
+                {{- end }}
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: {{ .Values.elastic.persistence.storageClassName }}
+                resources:
+                    requests:
+                        storage: {{ .Values.elastic.persistence.capacity }}
+                {{- with .Values.elastic.persistence.accessModes }}
+                accessModes: 
+                  {{- toYaml . | nindent 18 }}
+                {{- end }}
+{{ end }}
