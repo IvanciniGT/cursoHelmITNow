@@ -4,7 +4,7 @@ En cualquier momento, mientras procesamos unas plantillas de helm:
         contexto: 
             clave1: valor1
             clave2: 
-                clave21:  <<<<<<<<<<<<<<<< with .clave1.clave12
+                clave21:  <<<<<<<<<<<<<<<< with .clave1.clave12   - cd 
                     clave211: valor211
                     clave211: valor212***
                 clave22: valor21
@@ -17,3 +17,11 @@ En cualquier momento, mientras procesamos unas plantillas de helm:
         .clave211
         $.clave2.clave21.clave211
         
+        
+        
+        
+----------------------
+include RUTA        -       chroot
+Contexto: <<<<<<
+    clave211: valor211 
+    clave211: valor212***

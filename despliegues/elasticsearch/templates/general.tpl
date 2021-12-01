@@ -1,3 +1,6 @@
+{{- define "elasticsearch.elasticUserPassword" -}}
+{{- .Values.elastic.auth.password | default (randAlphaNum 15) | b64enc -}}
+{{- end -}}
 
 {{- define "elasticsearch.nombre-servicio-data" -}}
 {{- .Release.Name }}-data-svc

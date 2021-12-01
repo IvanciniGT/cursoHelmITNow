@@ -1,0 +1,6 @@
+Gracias por usar nuestro Chart para instalar la app XXXX
+
+Cualquier cosita, NO me contacte al correo ivan.osuna.ayuste@gmail.com ;)
+
+Si necesitas entrar a Elastic, prueba la siguiente contraseña:
+    $ kubectl get secret {{ include "elasticsearch.nombre-secret-general" $ }} -n {{.Release.Namespace}} -o jsonpath={.data.elastic-user-password}" | base64 --decode
