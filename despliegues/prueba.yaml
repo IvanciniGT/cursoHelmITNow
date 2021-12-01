@@ -39,7 +39,7 @@ metadata:
 
 data:
     # NO TOCAR ESTE CONFIGMAP!!!!!
-    discovery.seed_hosts: RELEASE-NAME-master-svc
+    discovery.seed_hosts: RELEASE-NAME-master
     node.master: "false"
     node.data: "false"
     node.ingest: "false"
@@ -84,7 +84,7 @@ data:
 kind: Service
 apiVersion: v1
 metadata:
-    name: RELEASE-NAME-coordinator-svc
+    name: RELEASE-NAME-coordinator
 spec:
     type: ClusterIP
     selector:
@@ -102,7 +102,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-    name: RELEASE-NAME-ingest-svc
+    name: RELEASE-NAME-ingest
 spec:
     type: ClusterIP
     selector:
@@ -121,7 +121,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: RELEASE-NAME-kibana-svc
+  name: RELEASE-NAME-kibana
 spec:
   selector:
     app: RELEASE-NAME-kibana
@@ -134,7 +134,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-    name: RELEASE-NAME-master-svc
+    name: RELEASE-NAME-master
 spec:
     type: ClusterIP
     selector:
@@ -154,22 +154,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: RELEASE-NAME-kibana
-template:
+spec:
   replicas: 1
-  metadata:
-      app: RELEASE-NAME-kibana
-  spec:
-    selector:
-      app: RELEASE-NAME-kibana
-    containers:
-      -   image: kibana:7.12
+  selector:
+    matchLabels:
+        app: RELEASE-NAME-kibana
+  template:
+    metadata:
+      labels:
+        app: RELEASE-NAME-kibana
+    spec:
+      containers:
+      -   image: kibana:7.11.2
           name: kibana
           ports: 
-           - port: 5601
-             targetport: 5601
+           - containerPort: 5601
           env:
             - name: ELASTICSEARCH_HOSTS
-              value: 'https://RELEASE-NAME-coordinator-svc:9200'
+              value: 'https://RELEASE-NAME-coordinator:9200'
             - name: SERVER_NAME
               valueFrom: 
                     fieldRef:
@@ -185,16 +187,6 @@ template:
                 secretKeyRef:
                   name: RELEASE-NAME-secret
                   key: elastic-user-password
-          resources:
-            requests:
-              cpu: ~
-              memory: ~
-            limits: 
-              cpu: ~
-              memory: ~
-          tolerations: {}
-          affinity: {}
-          nodeSelector: {}
 ---
 # Source: elasticsearch/templates/data/statefulset.yaml
 apiVersion: apps/v1
@@ -223,7 +215,7 @@ spec:
           containers:
             - name: elasticSearch
               #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
-              image: elasticsearch:7.12
+              image: elasticsearch:7.11.2
                                                                     # Este $ no nos vale.... y la vamos a tener que liar
               resources:
                   limits:
@@ -281,7 +273,7 @@ spec:
         app: RELEASE-NAME-es
         tipo-nodo: ingest
         
-    serviceName: RELEASE-NAME-ingest-svc
+    serviceName: RELEASE-NAME-ingest
     
     template: # Plantilla del POD 
         metadata:
@@ -293,7 +285,7 @@ spec:
           containers:
             - name: elasticSearch
               #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
-              image: elasticsearch:7.12
+              image: elasticsearch:7.11.2
                                                                     # Este $ no nos vale.... y la vamos a tener que liar
               resources:
                   limits:
@@ -354,7 +346,7 @@ spec:
         app: RELEASE-NAME-es
         tipo-nodo: master
         
-    serviceName: RELEASE-NAME-master-svc
+    serviceName: RELEASE-NAME-master
     
     template: # Plantilla del POD 
         metadata:
@@ -366,7 +358,7 @@ spec:
           containers:
             - name: elasticSearch
               #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
-              image: elasticsearch:7.12
+              image: elasticsearch:7.11.2
                                                                     # Este $ no nos vale.... y la vamos a tener que liar
               resources:
                   limits:
@@ -392,6 +384,8 @@ spec:
                        fieldPath: metadata.name
                 - name: node.master
                   value: "true"
+                - name: discovery.seed_hosts
+                  value: RELEASE-NAME-master-0.RELEASE-NAME-master,RELEASE-NAME-master-1.RELEASE-NAME-master
                 - name: ELASTIC_PASSWORD
                   valueFrom:
                         secretKeyRef:

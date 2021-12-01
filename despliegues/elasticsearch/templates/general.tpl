@@ -1,36 +1,34 @@
-{{- define "elasticsearch.nombre-servicio-maestro" -}}
-{{- if .Values.master.service.name.fullOverride -}}
-{{- .Values.master.service.name.fullOverride -}}
-{{- else -}}
-{{- .Release.Name }}-{{ .Values.master.service.name.suffixOverride | default "master-svc" -}}
-{{- end -}}
-{{- end -}}
 
 {{- define "elasticsearch.nombre-servicio-data" -}}
 {{- .Release.Name }}-data-svc
 {{- end -}}
 
-{{- define "elasticsearch.nombre-servicio-coordinacion" -}}
-{{- if .Values.coordinator.service.name.fullOverride -}}
-{{- .Values.coordinator.service.name.fullOverride -}}
-{{- else -}}
-{{- .Release.Name }}-{{ .Values.coordinator.service.name.suffixOverride | default "coordinator-svc" -}}
+
+{{- define "elasticsearch.nombre-servicio-maestro" -}}
+{{- $nuevoContexto := dict "Default" "master" "Servicio" $.Values.master.service "ReleaseName" $.Release.Name -}}
+{{- include "elasticsearch.nombre-servicio" $nuevoContexto -}}
 {{- end -}}
+
+{{- define "elasticsearch.nombre-servicio-coordinacion" -}}
+{{- $nuevoContexto := dict "Default" "coordinator" "Servicio" $.Values.coordinator.service "ReleaseName" $.Release.Name -}}
+{{- include "elasticsearch.nombre-servicio" $nuevoContexto -}}
 {{- end -}}
 
 {{- define "elasticsearch.nombre-servicio-ingesta" -}}
-{{- if .Values.ingest.service.name.fullOverride -}}
-{{- .Values.ingest.service.name.fullOverride -}}
-{{- else -}}
-{{- .Release.Name }}-{{ .Values.ingest.service.name.suffixOverride | default "ingest-svc" -}}
-{{- end -}}
+{{- $nuevoContexto := dict "Default" "ingest" "Servicio" $.Values.ingest.service "ReleaseName" $.Release.Name -}}
+{{- include "elasticsearch.nombre-servicio" $nuevoContexto -}}
 {{- end -}}
 
 {{- define "elasticsearch.nombre-servicio-kibana" -}}
-{{- if .Values.kibana.service.name.fullOverride -}}
-{{- .Values.kibana.service.name.fullOverride -}}
+{{- $nuevoContexto := dict "Default" "kibana" "Servicio" $.Values.kibana.service "ReleaseName" $.Release.Name -}}
+{{- include "elasticsearch.nombre-servicio" $nuevoContexto -}}
+{{- end -}}
+
+{{- define "elasticsearch.nombre-servicio" -}}
+{{- if .Servicio.name.fullOverride -}}
+{{- .Servicio.name.fullOverride -}}
 {{- else -}}
-{{- .Release.Name }}-{{ .Values.kibana.service.name.suffixOverride | default "kibana-svc" -}}
+{{- .ReleaseName }}-{{ .Servicio.name.suffixOverride | default .Default -}}
 {{- end -}}
 {{- end -}}
 
@@ -47,11 +45,15 @@
 {{- .Release.Name }}-secret
 {{- end -}}
 
-{{- define "elasticsearch.imagen-elasticsearch" -}}
-elasticsearch:7.12
-{{- end -}}
 
+
+
+{{- define "elasticsearch.imagen-elasticsearch" -}}
+    {{- .Values.elastic.image.repo -}}:
+    {{- .Values.elastic.image.tag | default .Values.tag | default .Chart.AppVersion -}}
+{{- end -}}
 {{- define "elasticsearch.imagen-kibana" -}}
-kibana:7.12
+    {{- .Values.kibana.image.repo -}}:
+    {{- .Values.kibana.image.tag | default .Values.tag | default .Chart.AppVersion -}}
 {{- end -}}
 

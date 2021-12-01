@@ -1,3 +1,6 @@
+{{- $servicio_maestro := include "elasticsearch.nombre-servicio-maestro" $ -}}
+
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -12,7 +15,7 @@ spec:
         app: {{ .Release.Name }}-es
         tipo-nodo: master
         
-    serviceName: {{ include "elasticsearch.nombre-servicio-maestro" $ }}
+    serviceName: {{ $servicio_maestro }}
     
     template: # Plantilla del POD 
         metadata:
@@ -61,6 +64,8 @@ spec:
                        fieldPath: metadata.name
                 - name: node.master
                   value: "true"
+                - name: discovery.seed_hosts
+                  value: {{ .Release.Name }}-master-0.{{ $servicio_maestro }},{{ .Release.Name }}-master-1.{{ $servicio_maestro }}
                 - name: ELASTIC_PASSWORD
                   valueFrom:
                         secretKeyRef:
