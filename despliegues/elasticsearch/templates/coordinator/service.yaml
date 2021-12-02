@@ -6,7 +6,7 @@ spec:
     type: {{ .Values.coordinator.service.type }}
     selector:
         app: {{ .Release.Name }}-es
-        tipo-nodo: coordinator
+        coordinator: "true"
     ports:
         - name: externo
           port: {{ .Values.coordinator.service.ports.public }}

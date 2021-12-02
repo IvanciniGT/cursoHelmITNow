@@ -6,7 +6,7 @@ spec:
     type: {{ .Values.ingest.service.type }}
     selector:
         app: {{ .Release.Name }}-es
-        tipo-nodo: ingest
+        ingest: "true"
     ports:
         - name: externo
           port: {{ .Values.ingest.service.ports.public }}

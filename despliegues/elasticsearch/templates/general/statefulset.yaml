@@ -15,6 +15,9 @@
 
 {{ range $tipoNodo, $valores := $tiposNodos }}
 
+{{ if not ( eq ( $valores.deploy.replicas ) ( 0.0 ) ) }}
+
+
 {{- $nuevoContexto := dict "Default" $tipoNodo "Servicio" $valores.service "ReleaseName" $ReleaseName -}}
 {{- $servicio_statefulset := include "elasticsearch.nombre-servicio" $nuevoContexto -}}
 ---
@@ -24,13 +27,13 @@ metadata:
     name: {{ $ReleaseName }}-{{ $tipoNodo }}
     labels: 
         app: {{ $ReleaseName }}-es
-        tipo-nodo: {{ $tipoNodo }}
+        {{ $tipoNodo }}: "true"
 spec:
     replicas: {{ $valores.deploy.replicas }}
     selector:
       matchLabels:
         app: {{ $ReleaseName }}-es
-        tipo-nodo: {{ $tipoNodo }}
+        {{ $tipoNodo }}: "true"
         
     serviceName: {{ $servicio_statefulset }}
     
@@ -38,7 +41,20 @@ spec:
         metadata:
             labels: 
                 app: {{ $ReleaseName }}-es
-                tipo-nodo: {{ $tipoNodo }}
+                {{ $tipoNodo }}: "true"
+{{- if eq $tipoNodo "data" -}}
+  {{- if eq ( $.Values.ingest.deploy.replicas ) ( 0.0 )  }}
+                ingest: "true"
+  {{- end }}
+  {{- if eq ( $.Values.coordinator.deploy.replicas ) ( 0.0 )  }}
+                coordinator: "true"
+  {{- end }}
+{{- end }}
+                {{- with $valores.deploy.extraLabels }}
+                  {{- toYaml . | nindent 16 }}
+                {{- end }}
+
+
         spec:
           {{- with $valores.deploy.affinities }}
           affinity: 
@@ -50,13 +66,8 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
       
-          {{- with $valores.deploy.extraLabels }}
-          extraLabels: 
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          
           containers:
-            - name: elasticSearch
+            - name: elasticsearch
               #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
               image: {{ include "elasticsearch.imagen-elasticsearch" $ }}
                                                                     # Este $ no nos vale.... y la vamos a tener que liar
@@ -79,10 +90,20 @@ spec:
                   valueFrom: 
                     fieldRef:
                        fieldPath: metadata.name
+{{- if not (eq $tipoNodo "coordinator" ) }}              
                 - name: node.{{ $tipoNodo }}
                   value: "true"
+{{- end -}}
+{{- if eq $tipoNodo "data" -}}
+  {{- if eq ( $.Values.ingest.deploy.replicas ) ( 0.0 )  }}
+                - name: node.ingest
+                  value: "true"
+  {{- end -}}
+{{- end -}}
+{{- if eq $tipoNodo "master" }}              
                 - name: discovery.seed_hosts
                   value: {{ $ReleaseName }}-master-0.{{ $servicio_statefulset }},{{ $ReleaseName }}-master-1.{{ $servicio_statefulset }}
+{{- end }}
                 - name: ELASTIC_PASSWORD
                   valueFrom:
                         secretKeyRef:
@@ -109,4 +130,5 @@ spec:
                 {{- end }}
  #{{- end }}
 ---
+{{- end }}
 {{- end }}

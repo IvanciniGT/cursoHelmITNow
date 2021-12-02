@@ -6,7 +6,7 @@ spec:
     type: {{ .Values.master.service.type }}
     selector:
         app: {{ .Release.Name }}-es
-        tipo-nodo: master
+        master: "true"
     ports:
         - name: externo
           port: {{ .Values.master.service.ports.public }}

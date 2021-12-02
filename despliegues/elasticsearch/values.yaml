@@ -24,12 +24,12 @@ elastic:
   persistence:
     enabled: true
     storageClassName: "cluster-nfs"
-    capacity: 10Gb
+    capacity: 10Gi
     accessModes:
         #- ReadWriteOnce
         #- ReadOnceMany
         #- ReadWriteMany
-        - ReadWriteOncePod
+        - ReadOnlyMany
 
 master:
     image:
