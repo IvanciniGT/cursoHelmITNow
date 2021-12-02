@@ -7,48 +7,50 @@
 #    coordinadores
 #      En cada ejecucion mirare si me han pedido 0 replicas... y no hago na....
 
-{{- $tiposNodos := dict "master" .Values.master.deploy "data" .Values.data.deploy "ingest" .Values.ingest.deploy "coordinator" .Values.coordinator.deploy --}}
+{{- $tiposNodos := dict "master" .Values.master "data" .Values.data "ingest" .Values.ingest "coordinator" .Values.coordinator -}}
 
 {{- $ReleaseName := .Release.Name }}
 {{- $Elastic := .Values.elastic }}
 #{{- with .Values.master.deploy }}
 
 {{ range $tipoNodo, $valores := $tiposNodos }}
-{{- $servicio_maestro := include "elasticsearch.nombre-servicio-maestro" $ -}}
+
+{{- $nuevoContexto := dict "Default" $tipoNodo "Servicio" $valores.service "ReleaseName" $ReleaseName -}}
+{{- $servicio_statefulset := include "elasticsearch.nombre-servicio" $nuevoContexto -}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-    name: {{ $ReleaseName }}-master
+    name: {{ $ReleaseName }}-{{ $tipoNodo }}
     labels: 
         app: {{ $ReleaseName }}-es
-        tipo-nodo: master
+        tipo-nodo: {{ $tipoNodo }}
 spec:
-    replicas: {{ .replicas }}
+    replicas: {{ $valores.deploy.replicas }}
     selector:
       matchLabels:
         app: {{ $ReleaseName }}-es
-        tipo-nodo: master
+        tipo-nodo: {{ $tipoNodo }}
         
-    serviceName: {{ $servicio_maestro }}
+    serviceName: {{ $servicio_statefulset }}
     
     template: # Plantilla del POD 
         metadata:
             labels: 
                 app: {{ $ReleaseName }}-es
-                tipo-nodo: master
+                tipo-nodo: {{ $tipoNodo }}
         spec:
-          {{- with .affinities }}
+          {{- with $valores.deploy.affinities }}
           affinity: 
             {{- toYaml . | nindent 12 }}
           {{- end }}
           
-          {{- with .tolerations }}
+          {{- with $valores.deploy.tolerations }}
           tolerations: 
             {{- toYaml . | nindent 12 }}
           {{- end }}
       
-          {{- with .extraLabels }}
+          {{- with $valores.deploy.extraLabels }}
           extraLabels: 
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -58,7 +60,7 @@ spec:
               #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
               image: {{ include "elasticsearch.imagen-elasticsearch" $ }}
                                                                     # Este $ no nos vale.... y la vamos a tener que liar
-              {{- with .resources }}
+              {{- with $valores.deploy.resources }}
               resources: 
                 {{- toYaml . | nindent 18 }}
               {{- end }}
@@ -71,22 +73,22 @@ spec:
                 - configMapRef: 
                     name: {{ include "elasticsearch.nombre-configmap-default" $ }}
                 - configMapRef: 
-                    name: {{ $ReleaseName}}-master-es
+                    name: {{ $ReleaseName}}-{{ $tipoNodo }}-es
               env:
                 - name: node.name
                   valueFrom: 
                     fieldRef:
                        fieldPath: metadata.name
-                - name: node.master
+                - name: node.{{ $tipoNodo }}
                   value: "true"
                 - name: discovery.seed_hosts
-                  value: {{ $ReleaseName }}-master-0.{{ $servicio_maestro }},{{ $ReleaseName }}-master-1.{{ $servicio_maestro }}
+                  value: {{ $ReleaseName }}-master-0.{{ $servicio_statefulset }},{{ $ReleaseName }}-master-1.{{ $servicio_statefulset }}
                 - name: ELASTIC_PASSWORD
                   valueFrom:
                         secretKeyRef:
                             name: {{ include "elasticsearch.nombre-secret-general" $ }}
                             key: elastic-user-password
-                {{- with .extraEnv }}
+                {{- with $valores.deploy.extraEnv }}
                   {{- toYaml . | nindent 16 }}
                 {{- end }}
               volumeMounts:
@@ -106,6 +108,5 @@ spec:
                   {{- toYaml . | nindent 18 }}
                 {{- end }}
  #{{- end }}
- ---
- {{- end }}
- 
+---
+{{- end }}

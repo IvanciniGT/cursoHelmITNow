@@ -28,11 +28,15 @@
 {{- end -}}
 
 {{- define "elasticsearch.nombre-servicio" -}}
-{{- if .Servicio.name.fullOverride -}}
-{{- .Servicio.name.fullOverride -}}
-{{- else -}}
-{{- .ReleaseName }}-{{ .Servicio.name.suffixOverride | default .Default -}}
-{{- end -}}
+    {{- if .Servicio -}}
+        {{- if .Servicio.name.fullOverride -}}
+            {{- .Servicio.name.fullOverride -}}
+        {{- else -}}
+            {{- .ReleaseName }}-{{ .Servicio.name.suffixOverride | default .Default -}}
+        {{- end -}}
+    {{- else -}}
+        {{- .ReleaseName }}-{{ default .Default -}}
+    {{- end -}}
 {{- end -}}
 
 

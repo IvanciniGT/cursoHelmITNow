@@ -29,26 +29,6 @@ metadata:
 data:
   ES_JAVA_OPTS: -Xms1250m -Xmx1250m
 ---
-# Source: elasticsearch/templates/demo.yaml
-kind: ConfigMap
-apiVersion: v1
-
-metadata:
-  name: prueba
-
-data:
-    cluster.join.timeout: "180s"
-
-    cluster.name: "MiCluster"
-
-    cluster.publish.timeout: "180s"
-
-    cluster.routing.allocation.disk.threshold_enabled: "false"
-
-    xpack.license.self_generated.type: "basic"
-
-    xpack.security.enabled: "true"
----
 # Source: elasticsearch/templates/general/configmap-default.yaml
 kind: ConfigMap
 apiVersion: v1
@@ -208,7 +188,7 @@ spec:
                   name: RELEASE-NAME-secret
                   key: elastic-user-password
 ---
-# Source: elasticsearch/templates/data/statefulset.yaml
+# Source: elasticsearch/templates/data/statefulset.bak
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -278,7 +258,155 @@ spec:
                 accessModes:
                   - ReadWriteOncePod
 ---
-# Source: elasticsearch/templates/ingest/statefulset.yaml
+# Source: elasticsearch/templates/general/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: RELEASE-NAME-coordinator
+    labels: 
+        app: RELEASE-NAME-es
+        tipo-nodo: coordinator
+spec:
+    replicas: 0
+    selector:
+      matchLabels:
+        app: RELEASE-NAME-es
+        tipo-nodo: coordinator
+        
+    serviceName: RELEASE-NAME-coordinator
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: RELEASE-NAME-es
+                tipo-nodo: coordinator
+        spec:
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: elasticsearch:7.11.2
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              resources:
+                  limits:
+                    cpu: 1
+                    memory: 2Gi
+                  requests:
+                    cpu: 1
+                    memory: 2Gi
+              ports:
+                - containerPort: 9300
+                - containerPort: 9200
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-configmap-general
+                - configMapRef: 
+                    name: RELEASE-NAME-configmap-default
+                - configMapRef: 
+                    name: RELEASE-NAME-coordinator-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: node.coordinator
+                  value: "true"
+                - name: discovery.seed_hosts
+                  value: RELEASE-NAME-master-0.RELEASE-NAME-coordinator,RELEASE-NAME-master-1.RELEASE-NAME-coordinator
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: RELEASE-NAME-secret
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: cluster-nfs
+                resources:
+                    requests:
+                        storage: 10Gb
+                accessModes:
+                  - ReadWriteOncePod
+ #---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: RELEASE-NAME-data
+    labels: 
+        app: RELEASE-NAME-es
+        tipo-nodo: data
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: RELEASE-NAME-es
+        tipo-nodo: data
+        
+    serviceName: RELEASE-NAME-data
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: RELEASE-NAME-es
+                tipo-nodo: data
+        spec:
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: elasticsearch:7.11.2
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              resources:
+                  limits:
+                    cpu: 1
+                    memory: 2Gi
+                  requests:
+                    cpu: 1
+                    memory: 2Gi
+              ports:
+                - containerPort: 9300
+                - containerPort: 9200
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-configmap-general
+                - configMapRef: 
+                    name: RELEASE-NAME-configmap-default
+                - configMapRef: 
+                    name: RELEASE-NAME-data-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: node.data
+                  value: "true"
+                - name: discovery.seed_hosts
+                  value: RELEASE-NAME-master-0.RELEASE-NAME-data,RELEASE-NAME-master-1.RELEASE-NAME-data
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: RELEASE-NAME-secret
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: cluster-nfs
+                resources:
+                    requests:
+                        storage: 10Gb
+                accessModes:
+                  - ReadWriteOncePod
+ #---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -331,6 +459,8 @@ spec:
                        fieldPath: metadata.name
                 - name: node.ingest
                   value: "true"
+                - name: discovery.seed_hosts
+                  value: RELEASE-NAME-master-0.RELEASE-NAME-ingest,RELEASE-NAME-master-1.RELEASE-NAME-ingest
                 - name: ELASTIC_PASSWORD
                   valueFrom:
                         secretKeyRef:
@@ -350,8 +480,7 @@ spec:
                         storage: 10Gb
                 accessModes:
                   - ReadWriteOncePod
----
-# Source: elasticsearch/templates/master/statefulset.yaml
+ #---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -425,3 +554,109 @@ spec:
                         storage: 10Gb
                 accessModes:
                   - ReadWriteOncePod
+ #
+---
+# Source: elasticsearch/templates/ingest/statefulset.bak
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: RELEASE-NAME-ingest
+    labels: 
+        app: RELEASE-NAME-es
+        tipo-nodo: ingest
+spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: RELEASE-NAME-es
+        tipo-nodo: ingest
+        
+    serviceName: RELEASE-NAME-ingest
+    
+    template: # Plantilla del POD 
+        metadata:
+            labels: 
+                app: RELEASE-NAME-es
+                tipo-nodo: ingest
+        spec:
+          
+          containers:
+            - name: elasticSearch
+              #image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+              image: elasticsearch:7.11.2
+                                                                    # Este $ no nos vale.... y la vamos a tener que liar
+              resources:
+                  limits:
+                    cpu: 1
+                    memory: 2Gi
+                  requests:
+                    cpu: 1
+                    memory: 2Gi
+              ports:
+                - containerPort: 9300
+                - containerPort: 9200
+              envFrom:
+                - configMapRef:
+                    name: RELEASE-NAME-configmap-general
+                - configMapRef: 
+                    name: RELEASE-NAME-configmap-default
+                - configMapRef: 
+                    name: RELEASE-NAME-ingest-es
+              env:
+                - name: node.name
+                  valueFrom: 
+                    fieldRef:
+                       fieldPath: metadata.name
+                - name: node.ingest
+                  value: "true"
+                - name: ELASTIC_PASSWORD
+                  valueFrom:
+                        secretKeyRef:
+                            name: RELEASE-NAME-secret
+                            key: elastic-user-password
+              volumeMounts:
+                - name: datos-elasticsearch
+                  mountPath: /usr/share/elasticsearch/data
+                  
+    volumeClaimTemplates:
+        -   metadata:
+                name: datos-elasticsearch
+            spec:
+                storageClassName: cluster-nfs
+                resources:
+                    requests:
+                        storage: 10Gb
+                accessModes:
+                  - ReadWriteOncePod
+---
+# Source: elasticsearch/templates/demo.yaml
+#kind: ConfigMap
+#apiVersion: v1#
+#
+#metadata:
+#  name: prueba#
+#
+#data:
+#
+#    cluster.join.timeout: "180s"
+#
+#    cluster.name: "MiCluster"
+#
+#    cluster.publish.timeout: "180s"
+#
+#    cluster.routing.allocation.disk.threshold_enabled: "false"
+#
+#    xpack.license.self_generated.type: "basic"
+#
+#    xpack.security.enabled: "true"
+#
+---
+# Source: elasticsearch/templates/general/statefulset.yaml
+#Bucle:
+#  diccionario
+#    4 veces:
+#    maestros
+#    dataingesta
+#    coordinadores
+#      En cada ejecucion mirare si me han pedido 0 replicas... y no hago na....
+#
