@@ -37,14 +37,11 @@ master:
         #tag:  7.11.2
         dataPath:
     deploy:
-        replicas: 2
+        replicas: 3
         resources:
             requests:
-                memory: 2Gi
-                cpu: 1
-            limits:
-                memory: 2Gi
-                cpu: 1
+                memory: 0.5Gi
+                cpu: 0.5
         annotations: {}
         extraLabels: {}
         tolerations: {}
@@ -53,7 +50,7 @@ master:
         defaultAntiPodAffinity: true
         extraEnv: {}
         conf:
-          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+          ES_JAVA_OPTS: "-Xms350m -Xmx350m" 
     
     service:
         name:
@@ -69,13 +66,7 @@ master:
 data:
     deploy:
         replicas: 2
-        resources:
-            requests:
-                memory: 2Gi
-                cpu: 1
-            limits:
-                memory: 2Gi
-                cpu: 1
+        resources: {}
         annotations: {}
         extraLabels: {}
         tolerations: {}
@@ -84,18 +75,12 @@ data:
         defaultAntiPodAffinity: true
         extraEnv: {}
         conf:
-          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+          ES_JAVA_OPTS: "-Xms350m -Xmx350m" 
     
 ingest:
     deploy:
         replicas: 2
-        resources:
-            requests:
-                memory: 2Gi
-                cpu: 1
-            limits:
-                memory: 2Gi
-                cpu: 1
+        resources: {}
         annotations: {}
         extraLabels: {}
         tolerations: {}
@@ -104,7 +89,7 @@ ingest:
         defaultAntiPodAffinity: true
         extraEnv: {}
         conf:
-          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+          ES_JAVA_OPTS: "-Xms350m -Xmx350m" 
     
     service:
         name:
@@ -127,12 +112,7 @@ coordinator:
     deploy:
         replicas: 0
         resources:
-            requests:
-                memory: 2Gi
-                cpu: 1
-            limits:
-                memory: 2Gi
-                cpu: 1
+            requests:{}
         annotations: {}
         extraLabels: {}
         tolerations: {}
@@ -141,7 +121,7 @@ coordinator:
         defaultAntiPodAffinity: true
         extraEnv: {}
         conf:
-          ES_JAVA_OPTS: "-Xms1250m -Xmx1250m" 
+          ES_JAVA_OPTS: "-Xms350m -Xmx350m" 
           
     service: # REALEASE_NAME-coordinator-svc
         name:
