@@ -29,6 +29,26 @@ metadata:
 data:
   ES_JAVA_OPTS: -Xms1250m -Xmx1250m
 ---
+# Source: elasticsearch/templates/demo.yaml
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: prueba
+
+data:
+    cluster.join.timeout: "180s"
+
+    cluster.name: "MiCluster"
+
+    cluster.publish.timeout: "180s"
+
+    cluster.routing.allocation.disk.threshold_enabled: "false"
+
+    xpack.license.self_generated.type: "basic"
+
+    xpack.security.enabled: "true"
+---
 # Source: elasticsearch/templates/general/configmap-default.yaml
 kind: ConfigMap
 apiVersion: v1

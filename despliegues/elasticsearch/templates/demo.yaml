@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+
+metadata:
+  name: prueba
+
+data:
+{{- range $clave, $valor := .Values.elastic.conf }}
+    {{ $clave }}: {{ $valor | quote }}
+{{ end -}}
